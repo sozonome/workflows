@@ -3,36 +3,29 @@ on:
 
 name: Release
 jobs:
-#   release:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - uses: actions/checkout@v3
-#         with:
-#           fetch-depth: 0
-
-#       - uses: actions/setup-node@v3
-#         with:
-#           node-version: 16.x
-
-#       - name: Configure committer
-#         run: |
-#           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-#           git config --global user.name "github-actions"
-
-#       - name: Bump version and generate changelog
-#         run: npx standard-version
-
-#       - name: Push commit and tags
-#         run: git push --follow-tags
-
-#       - name: Publish release note
-#         run: npx changelogithub
-#         env:
-#           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  release-please:
+  release:
     runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v3
+      - uses: actions/checkout@v3
         with:
-          release-type: node
-          package-name: release-please-action
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Configure committer
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions"
+
+      - name: Bump version and generate changelog
+        run: npx standard-version
+
+      - name: Push commit and tags
+        run: git push --follow-tags
+
+      - name: Publish release note
+        run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
