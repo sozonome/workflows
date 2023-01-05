@@ -1,0 +1,31 @@
+on:
+  workflow_call:
+
+name: Release
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+
+      - name: Configure committer
+        run: |
+          git config user.name "GitHub Actions Bot"
+          git config user.email "<>"
+
+      - name: Bump version and generate changelog
+        run: npx standard-version
+
+      - name: Push commit and tags
+        run: git push --follow-tags
+
+      - name: Publish release note
+        run: npx changelogithub
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
