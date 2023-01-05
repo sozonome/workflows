@@ -21,6 +21,8 @@ jobs:
 
       - name: Bump version and generate changelog
         run: npx standard-version
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Push commit and tags
         run: git push --follow-tags
