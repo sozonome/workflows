@@ -18,5 +18,5 @@ jobs:
       - name: Commit and push
         uses: stefanzweifel/git-auto-commit-action@v3
         with:
-          commit_message: "Update license to ${{ date +%Y }}"
+          commit_message: "Update license to ${{ (date +%Y) }}"
           push: true
