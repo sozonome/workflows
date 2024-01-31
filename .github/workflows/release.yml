@@ -4,7 +4,7 @@ on:
 name: Release
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v3
         with:

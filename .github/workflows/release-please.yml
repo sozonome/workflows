@@ -9,7 +9,7 @@ on:
 name: Release
 jobs:
   release-please:
-    runs-on: ubuntu-latest
+    runs-on: macos-14
     steps:
       - uses: google-github-actions/release-please-action@v3
         with:
