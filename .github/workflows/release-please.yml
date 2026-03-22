@@ -2,16 +2,27 @@ on:
   workflow_call:
     inputs:
       release-type:
+        type: string
         required: true
         description: release type
         default: "node"
+      token:
+        type: string
+        required: false
+        description: GitHub token for release-please
+        default: ${{ github.token }}
 
 name: Release
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release-please:
-    runs-on: macos-14
+    runs-on: ubuntu-latest
     steps:
-      - uses: google-github-actions/release-please-action@v3
+      - uses: googleapis/release-please-action@v4
         with:
           release-type: ${{ inputs.release-type }}
-          package-name: release-please-action
+          token: ${{ inputs.token }}
