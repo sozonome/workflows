@@ -23,6 +23,11 @@ on:
         type: string
         required: false
         default: "chore/auto-deps-update"
+      ignore-scripts:
+        type: boolean
+        required: false
+        default: false
+        description: Pass --ignore-scripts to install/update commands (useful for Astro projects)
 
 permissions:
   contents: write
@@ -121,11 +126,11 @@ jobs:
 
       - name: Install dependencies
         if: steps.guard.outputs.exists == 'true'
-        run: ${{ steps.pm.outputs.install }}
+        run: ${{ steps.pm.outputs.install }}${{ inputs.ignore-scripts && ' --ignore-scripts' || '' }}
 
       - name: Update dependencies
         if: steps.guard.outputs.exists == 'true'
-        run: ${{ steps.pm.outputs.update }}
+        run: ${{ steps.pm.outputs.update }}${{ inputs.ignore-scripts && ' --ignore-scripts' || '' }}
 
       - name: Dedupe
         if: steps.guard.outputs.exists == 'true'
