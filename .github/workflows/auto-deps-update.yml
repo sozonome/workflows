@@ -1,0 +1,161 @@
+name: Auto Dependency Update
+
+on:
+  workflow_call:
+    inputs:
+      node-version:
+        type: string
+        required: false
+        default: "24"
+      check-command:
+        type: string
+        required: false
+        default: ""
+        description: |
+          Override auto-detected check command (e.g. 'pnpm check:turbo').
+          Auto-detects check:turbo → check → type:check → lint → test → build
+          from package.json if empty.
+      commit-message:
+        type: string
+        required: false
+        default: "chore(deps): auto update dependencies"
+      branch:
+        type: string
+        required: false
+        default: "chore/auto-deps-update"
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  update-deps:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Check for package.json
+        id: guard
+        run: |
+          if [ -f "package.json" ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Detect package manager
+        id: pm
+        run: |
+          if [ -f "pnpm-lock.yaml" ]; then
+            echo "name=pnpm" >> "$GITHUB_OUTPUT"
+            echo "install=pnpm install" >> "$GITHUB_OUTPUT"
+            echo "update=pnpm update" >> "$GITHUB_OUTPUT"
+            echo "dedupe=pnpm dedupe" >> "$GITHUB_OUTPUT"
+            echo "exec=pnpm" >> "$GITHUB_OUTPUT"
+            echo "cache=" >> "$GITHUB_OUTPUT"
+          elif [ -f "yarn.lock" ]; then
+            echo "name=yarn" >> "$GITHUB_OUTPUT"
+            echo "install=yarn install --frozen-lockfile" >> "$GITHUB_OUTPUT"
+            echo "update=yarn upgrade --latest" >> "$GITHUB_OUTPUT"
+            echo "dedupe=yarn dedupe" >> "$GITHUB_OUTPUT"
+            echo "exec=yarn" >> "$GITHUB_OUTPUT"
+            echo "cache=yarn" >> "$GITHUB_OUTPUT"
+          elif [ -f "bun.lockb" ] || [ -f "bun.lock" ]; then
+            echo "name=bun" >> "$GITHUB_OUTPUT"
+            echo "install=bun install" >> "$GITHUB_OUTPUT"
+            echo "update=bun update" >> "$GITHUB_OUTPUT"
+            echo "dedupe=# bun dedupes automatically" >> "$GITHUB_OUTPUT"
+            echo "exec=bun" >> "$GITHUB_OUTPUT"
+            echo "cache=" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=npm" >> "$GITHUB_OUTPUT"
+            echo "install=npm ci" >> "$GITHUB_OUTPUT"
+            echo "update=npm update" >> "$GITHUB_OUTPUT"
+            echo "dedupe=npm dedupe" >> "$GITHUB_OUTPUT"
+            echo "exec=npx" >> "$GITHUB_OUTPUT"
+            echo "cache=npm" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Setup pnpm
+        if: steps.pm.outputs.name == 'pnpm'
+        uses: pnpm/action-setup@v6
+        with:
+          cache: true
+
+      - name: Setup bun
+        if: steps.pm.outputs.name == 'bun'
+        uses: oven-sh/setup-bun@v2
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: ${{ inputs.node-version }}
+          cache: ${{ steps.pm.outputs.cache }}
+
+      - name: Detect available scripts
+        id: scripts
+        if: steps.guard.outputs.exists == 'true'
+        env:
+          PM_EXEC: ${{ steps.pm.outputs.exec }}
+          CHECK_CMD: ${{ inputs.check-command }}
+        run: |
+          node -e "
+          const pm = process.env.PM_EXEC;
+          const pkg = JSON.parse(require('fs').readFileSync('package.json','utf8'));
+          const scripts = pkg.scripts ?? {};
+          const userCheck = process.env.CHECK_CMD.trim();
+
+          // Check command: user override or first found in priority order
+          if (userCheck) {
+            console.log('check=' + userCheck);
+          } else {
+            for (const s of ['check:turbo', 'check', 'type:check', 'lint', 'test', 'build']) {
+              if (scripts[s]) { console.log('check=' + pm + ' ' + s); break; }
+            }
+          }
+
+          // Fix command: first found formatter
+          for (const s of ['ultracite:fix', 'biome:fix', 'format', 'lint:fix']) {
+            if (scripts[s]) { console.log('fix=' + pm + ' ' + s); break; }
+          }
+          " >> "$GITHUB_OUTPUT"
+
+      - name: Install dependencies
+        if: steps.guard.outputs.exists == 'true'
+        run: ${{ steps.pm.outputs.install }}
+
+      - name: Update dependencies
+        if: steps.guard.outputs.exists == 'true'
+        run: ${{ steps.pm.outputs.update }}
+
+      - name: Dedupe
+        if: steps.guard.outputs.exists == 'true'
+        run: ${{ steps.pm.outputs.dedupe }}
+
+      - name: Fix formatting
+        if: steps.scripts.outputs.fix != ''
+        run: ${{ steps.scripts.outputs.fix }}
+
+      - name: Run checks
+        if: steps.scripts.outputs.check != ''
+        run: ${{ steps.scripts.outputs.check }}
+
+      - name: Build PR description
+        id: pr-body
+        run: |
+          body="Automated dependency update by GitHub Actions."
+          body+="%0A%0A- All dependencies updated to latest"
+          if [ -n "${{ steps.scripts.outputs.check }}" ]; then
+            body+="%0A- Checks passed: ${{ steps.scripts.outputs.check }}"
+          fi
+          echo "body=${body}" >> "$GITHUB_OUTPUT"
+
+      - name: Create PR
+        if: steps.guard.outputs.exists == 'true'
+        uses: peter-evans/create-pull-request@v8
+        with:
+          commit-message: ${{ inputs.commit-message }}
+          title: ${{ inputs.commit-message }}
+          body: ${{ steps.pr-body.outputs.body }}
+          branch: ${{ inputs.branch }}
+          delete-branch: true
+          labels: dependencies
