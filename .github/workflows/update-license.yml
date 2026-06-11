@@ -9,6 +9,7 @@ permissions:
 jobs:
   update-license:
     runs-on: ubuntu-latest
+    timeout-minutes: 3
     steps:
       # Check out the repository
       - uses: actions/checkout@v6
