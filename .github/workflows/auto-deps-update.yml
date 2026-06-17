@@ -86,7 +86,6 @@ jobs:
         if: steps.pm.outputs.name == 'pnpm'
         uses: pnpm/setup@v1
         with:
-          runtime: node@${{ inputs.node-version }}
           cache: true
           install: false
 
