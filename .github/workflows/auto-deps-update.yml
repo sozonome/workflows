@@ -82,17 +82,20 @@ jobs:
             echo "cache=npm" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Setup pnpm
+      - name: Setup pnpm + Node.js
         if: steps.pm.outputs.name == 'pnpm'
-        uses: pnpm/action-setup@v6
+        uses: pnpm/setup@v1
         with:
+          runtime: node@${{ inputs.node-version }}
           cache: true
+          install: false
 
       - name: Setup bun
         if: steps.pm.outputs.name == 'bun'
         uses: oven-sh/setup-bun@v2
 
       - uses: actions/setup-node@v6
+        if: steps.pm.outputs.name != 'pnpm'
         with:
           node-version: ${{ inputs.node-version }}
           cache: ${{ steps.pm.outputs.cache }}
