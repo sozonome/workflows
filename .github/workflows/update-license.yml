@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 3
     steps:
       # Check out the repository
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # Update the license file
       - name: Update License
