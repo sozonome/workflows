@@ -1,5 +1,14 @@
 on:
   workflow_call:
+    inputs:
+      node-version:
+        type: string
+        required: false
+        default: "24"
+        description: |
+          Node.js version for actions/setup-node.
+          Must satisfy the caller repo's engines/devEngines (e.g. "24.16.0"
+          when devEngines pins an exact version).
 
 name: Release
 
@@ -17,7 +26,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 24
+          node-version: ${{ inputs.node-version }}
           check-latest: true
 
       - name: Configure committer
